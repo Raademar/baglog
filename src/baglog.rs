@@ -8,30 +8,30 @@ pub mod baglog {
 
     use super::message::BagLogMessage;
 
-    pub struct BagLogConfig<'b> {
-        pub date_format: &'b str,
-        pub out_file: &'b str,
+    pub struct BagLogConfig {
+        pub date_format: String,
+        pub out_file: String,
         pub write_to_terminal: bool,
         pub write_to_file: bool,
     }
 
-    impl<'b> Default for BagLogConfig<'b> {
+    impl Default for BagLogConfig {
         fn default() -> Self {
             Self {
-                date_format: "%Y-%m-%d %H:%M:%S",
-                out_file: "log.log",
+                date_format: String::from("%Y-%m-%d %H:%M:%S"),
+                out_file: String::from("log.log"),
                 write_to_terminal: true,
                 write_to_file: true,
             }
         }
     }
 
-    pub struct BagLog<'a> {
-        config: BagLogConfig<'a>,
+    pub struct BagLog {
+        config: BagLogConfig,
     }
 
-    impl<'a> BagLog<'a> {
-        pub fn new(config: Option<BagLogConfig<'a>>) -> Self {
+    impl BagLog {
+        pub fn new(config: Option<BagLogConfig>) -> Self {
             match config {
                 Some(cfg) => BagLog { config: { cfg } },
                 None => BagLog {
@@ -40,12 +40,24 @@ pub mod baglog {
             }
         }
 
-        pub fn write(&self, message: String) -> std::io::Result<()> {
+        pub fn get_config(&self) -> &BagLogConfig {
+            return &self.config;
+        }
+
+        pub fn write(
+            &self,
+            message: String,
+            mut writer: impl std::io::Write,
+        ) -> std::io::Result<()> {
             let date: DateTime<Local> = Local::now();
             let bag_message = BagLogMessage { date, message };
 
             if self.config.write_to_terminal {
-                self.write_to_terminal(&bag_message);
+                let log_res = self.write_to_terminal(&bag_message, &mut writer);
+                match log_res {
+                    Err(err) => panic!("Something went wrong when writing to terminal: {}", err),
+                    Ok(_) => (),
+                }
             }
 
             if self.config.write_to_file {
@@ -59,12 +71,16 @@ pub mod baglog {
             let date = &bag_message.date.format(&self.config.date_format);
             let msg = &bag_message.message;
 
-            return format!("[{date}]: {msg}\n");
+            return format!("[{date}]: {msg}");
         }
 
-        fn write_to_terminal(&self, bag_message: &BagLogMessage) {
+        pub fn write_to_terminal(
+            &self,
+            bag_message: &BagLogMessage,
+            mut writer: &mut impl std::io::Write,
+        ) -> Result<(), std::io::Error> {
             let msg = self.format_message(bag_message);
-            println!("{msg}")
+            writeln!(&mut writer, "{}", msg)
         }
 
         fn write_to_file(&self, bag_message: &BagLogMessage) -> std::io::Result<()> {
