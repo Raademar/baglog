@@ -1,3 +1,2 @@
-pub mod baglog;
-mod test;
-pub use baglog::baglog::{BagLog, BagLogConfig};
+mod baglog;
+pub use crate::baglog::baglog::{BagLog, BagLogConfig};
