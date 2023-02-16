@@ -1,4 +1,4 @@
-use baglog::{BagLogConfig, BagLog};
+use baglog::{BagLog, BagLogConfig};
 use chrono::{DateTime, Local};
 use std::{fs, str};
 
