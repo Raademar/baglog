@@ -40,7 +40,7 @@ impl BagLog {
     }
 
     pub fn get_config(&self) -> &BagLogConfig {
-        return &self.config;
+        &self.config
     }
 
     pub fn write(&self, message: String, mut writer: impl std::io::Write) -> std::io::Result<()> {
@@ -49,16 +49,16 @@ impl BagLog {
 
         if self.config.write_to_terminal {
             let log_res = self.write_to_terminal(&bag_message, &mut writer);
-            match log_res {
-                Err(err) => panic!("Something went wrong when writing to terminal: {}", err),
-                Ok(_) => (),
+
+            if let Err(err) = log_res {
+                panic!("Something went wrong when writing to terminal: {}", err)
             }
         }
 
         if self.config.write_to_file {
-            return self.write_to_file(&bag_message);
+            self.write_to_file(&bag_message)
         } else {
-            return Ok(());
+            Ok(())
         }
     }
 
@@ -66,7 +66,7 @@ impl BagLog {
         let date = &bag_message.date.format(&self.config.date_format);
         let msg = &bag_message.message;
 
-        return format!("[{date}]: {msg}");
+        format!("[{date}]: {msg}")
     }
 
     pub fn write_to_terminal(
