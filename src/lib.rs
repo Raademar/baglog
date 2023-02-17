@@ -1,29 +1,14 @@
+pub mod config;
 pub mod message;
+mod test;
 
 use chrono::{DateTime, Local};
+use config::BagLogConfig;
 use message::BagLogMessage;
 use std::{
     fs::{File, OpenOptions},
     io::{ErrorKind, Write},
 };
-
-pub struct BagLogConfig {
-    pub date_format: String,
-    pub out_file: String,
-    pub write_to_terminal: bool,
-    pub write_to_file: bool,
-}
-
-impl Default for BagLogConfig {
-    fn default() -> Self {
-        Self {
-            date_format: String::from("%Y-%m-%d %H:%M:%S"),
-            out_file: String::from("log.log"),
-            write_to_terminal: true,
-            write_to_file: true,
-        }
-    }
-}
 
 pub struct BagLog {
     config: BagLogConfig,
@@ -43,42 +28,28 @@ impl BagLog {
         &self.config
     }
 
-    pub fn write(&self, message: String, mut writer: impl std::io::Write) -> std::io::Result<()> {
+    pub fn write(&self, message: String) -> std::io::Result<()> {
         let date: DateTime<Local> = Local::now();
         let bag_message = BagLogMessage { date, message };
 
-        if self.config.write_to_terminal {
-            let log_res = self.write_to_terminal(&bag_message, &mut writer);
+        let formated_message = &self.config.format_message(&bag_message);
 
-            if let Err(err) = log_res {
-                panic!("Something went wrong when writing to terminal: {}", err)
-            }
+        if self.config.write_to_terminal {
+            self.write_to_terminal(formated_message)
         }
 
         if self.config.write_to_file {
-            self.write_to_file(&bag_message)
+            self.write_to_file(&formated_message)
         } else {
             Ok(())
         }
     }
 
-    fn format_message(&self, bag_message: &BagLogMessage) -> String {
-        let date = &bag_message.date.format(&self.config.date_format);
-        let msg = &bag_message.message;
-
-        format!("[{date}]: {msg}")
+    pub fn write_to_terminal(&self, message: &str) {
+        println!("{:?}", message)
     }
 
-    pub fn write_to_terminal(
-        &self,
-        bag_message: &BagLogMessage,
-        mut writer: &mut impl std::io::Write,
-    ) -> Result<(), std::io::Error> {
-        let msg = self.format_message(bag_message);
-        writeln!(&mut writer, "{}", msg)
-    }
-
-    fn write_to_file(&self, bag_message: &BagLogMessage) -> std::io::Result<()> {
+    fn write_to_file(&self, message: &str) -> std::io::Result<()> {
         let file_to_write = OpenOptions::new()
             .read(true)
             .append(true)
@@ -97,8 +68,7 @@ impl BagLog {
                 }
             },
         };
-        let msg = &self.format_message(bag_message);
-        log_file.write_all(msg.as_bytes())?;
+        log_file.write_all(message.as_bytes())?;
 
         Ok(())
     }
