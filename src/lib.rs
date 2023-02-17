@@ -4,6 +4,7 @@ mod test;
 
 use chrono::{DateTime, Local};
 use config::BagLogConfig;
+use core::panic;
 use message::BagLogMessage;
 use std::{
     fs::{File, OpenOptions},
@@ -35,21 +36,32 @@ impl BagLog {
         let formated_message = &self.config.format_message(&bag_message);
 
         if self.config.write_to_terminal {
-            self.write_to_terminal(formated_message)
+            let res = self.write_to_terminal(formated_message, None::<Vec<u8>>);
+
+            if let Err(err) = res {
+                panic!("{err}");
+            }
         }
 
         if self.config.write_to_file {
-            self.write_to_file(&formated_message)
+            self.write_to_file(formated_message)
         } else {
             Ok(())
         }
     }
 
-    pub fn write_to_terminal(&self, message: &str) {
-        println!("{:?}", message)
+    pub fn write_to_terminal(
+        &self,
+        message: &str,
+        writer: Option<impl Write>,
+    ) -> Result<(), std::io::Error> {
+        match writer {
+            Some(mut w) => writeln!(&mut w, "{}", message),
+            None => todo!(),
+        }
     }
 
-    fn write_to_file(&self, message: &str) -> std::io::Result<()> {
+    pub fn write_to_file(&self, message: &str) -> std::io::Result<()> {
         let file_to_write = OpenOptions::new()
             .read(true)
             .append(true)
